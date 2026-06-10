@@ -1,0 +1,48 @@
+## Surrogate model configuration for the example notebook.
+#
+# Demonstrates pretraining, online fine-tuning, and inference for an
+# Enhanced Gated TCN (G-TCN) surrogate of the HBV hydrological model
+# with sensitivity constraints (SC).
+
+model:
+  name: EnhancedGatedTCN
+  n_forc: 3             # number of atmospheric forcing variables (prcp, tmean, pet)
+  n_params: 12          # number of HBV parameters used as static conditioning
+  n_out: 1              # target: runoff / streamflow
+  width: 64             # hidden channel width (reduce for faster demo)
+  depth: 4              # number of TCN blocks
+  kernel_size: 3
+  causal: true          # causal convolutions (no future leakage)
+  dropout: 0.1
+  stochastic_depth: 0.05
+
+data:
+  train_path: ./data/train.zarr
+  eval_path:  ./data/eval.zarr
+  rho: 365             # sequence window length (days)
+  batch_nb: 20         # basins per minibatch
+  n_batches: 20        # minibatches per epoch
+  target_norm: log     # 'log' = log10(sqrt(y) + 0.1), suitable for low-flow regime
+
+pretrain:
+  epochs: 10
+  lr: 1.0e-3
+  weight_decay: 1.0e-5
+  optimizer: Adam
+  scheduler: StepLR
+  scheduler_params:
+    step_size: 5
+    gamma: 0.5
+  save_epoch: 5
+  save_path: ./output/pretrain/
+
+  ## Sensitivity constraint settings
+  sc_p: [0, 2]         # indices of HBV parameters to constrain (subset for speed)
+  sc_interval: 1       # apply SC loss every N epochs (1 = every epoch)
+
+online:
+  ft_epochs: 5         # surrogate fine-tuning epochs per online update
+  save_path: ./output/online/
+
+inference:
+  save_path: ./output/inference/
